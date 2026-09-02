@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"regexp"
@@ -9,12 +11,12 @@ import (
 
 // LogEntry represents a parsed log line
 type LogEntry struct {
-	IP        string
-	Timestamp string
-	Method    string
-	URL       string
-	Status    string
-	Size      string
+	IP        string `json:"ip"`
+	Timestamp string `json:"timestamp"`
+	Method    string `json:"method"`
+	URL       string `json:"url"`
+	Status    string `json:"status"`
+	Size      string `json:"size"`
 }
 
 // Log regex pattern for standard combined format
@@ -37,12 +39,15 @@ func parseLine(line string) (*LogEntry, error) {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: go-log-analyzer <log-file>")
+	formatPtr := flag.String("output", "text", "Output format: text or json")
+	flag.Parse()
+
+	if flag.NArg() < 1 {
+		fmt.Println("Usage: go-log-analyzer [-output=json] <log-file>")
 		os.Exit(1)
 	}
 
-	file, err := os.Open(os.Args[1])
+	file, err := os.Open(flag.Arg(0))
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
 		os.Exit(1)
@@ -50,19 +55,25 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	successCount := 0
-	errorCount := 0
+	var entries []*LogEntry
 
 	for scanner.Scan() {
-		_, err := parseLine(scanner.Text())
+		entry, err := parseLine(scanner.Text())
 		if err != nil {
-			errorCount++
 			continue
 		}
-		successCount++
+		entries = append(entries, entry)
 	}
 
-	fmt.Printf("Analysis Complete:\n")
-	fmt.Printf("Successfully parsed: %d lines\n", successCount)
-	fmt.Printf("Failed to parse:     %d lines\n", errorCount)
+	if *formatPtr == "json" {
+		jsonData, err := json.MarshalIndent(entries, "", "  ")
+		if err != nil {
+			fmt.Printf("Error encoding JSON: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(string(jsonData))
+	} else {
+		fmt.Printf("Analysis Complete:\n")
+		fmt.Printf("Successfully parsed: %d lines\n", len(entries))
+	}
 }
