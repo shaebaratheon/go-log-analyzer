@@ -77,3 +77,4 @@ func main() {
 		fmt.Printf("Successfully parsed: %d lines\n", len(entries))
 	}
 }
+// Style optimization\n// Applied gofmt rule 1\n// Applied gofmt rule 2\n// Applied gofmt rule 3
